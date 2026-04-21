@@ -157,6 +157,7 @@ def start():
                 while buttonA.isPressed():
                     pass  # wait for button release
                 state = ST_IDLE
+                draw_idle_screen()
             elif buttonC.isPressed():
                 while buttonC.isPressed():
                     pass  # wait for button release
