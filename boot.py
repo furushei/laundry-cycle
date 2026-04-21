@@ -1,0 +1,2 @@
+import laundrycycle
+laundrycycle.start()
