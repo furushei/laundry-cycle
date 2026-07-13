@@ -2,6 +2,8 @@ from m5stack import lcd, buttonA, buttonC, speaker
 from machine import Timer
 import time
 
+import accellogger
+
 
 # State definitions
 ST_IDLE = 1
@@ -141,9 +143,14 @@ def start():
     state = ST_IDLE
     start_time = None
 
+    accel_logging = accellogger.init(ST_IDLE)
+
     draw_idle_screen()
+    if not accel_logging:
+        draw_label("ACCEL LOG OFF", LABEL_TEXT_COLOR, BACKGROUND_COLOR_IDLE)
 
     while True:
+        accellogger.set_state(state)
         # update state
         if state == ST_IDLE:
             if buttonC.isPressed():
