@@ -39,6 +39,7 @@ _imu = None
 _state = 0         # current app state, written by the main thread only
 _idle_state = 0    # state value that means "buffer only, do not record"
 _last_error = None  # exception that stopped the logger thread, if any
+_alive_ticks = 0    # last loop timestamp, updated by the logger thread
 
 
 def init(idle_state):
@@ -70,6 +71,14 @@ def set_state(state):
     # a single int store is atomic under the GIL, so no lock is needed
     global _state
     _state = state
+
+
+def status():
+    # debug helper: call from the REPL to inspect the logger thread
+    print('thread alive:', time.ticks_diff(time.ticks_ms(), _alive_ticks) < 1000)
+    print('ring count:', _ring_count)
+    print('state:', _state)
+    print('last error:', repr(_last_error))
 
 
 def _mount_sd():
@@ -144,14 +153,16 @@ def _dump_ring_buffer(file):
 
 
 def _thread_main():
+    global _alive_ticks
     file = None
     pending = []
     last_flush = time.ticks_ms()
     deadline = time.ticks_ms()
     while True:
-        deadline = time.ticks_add(deadline, SAMPLE_PERIOD)
-        state = _state
         try:
+            _alive_ticks = time.ticks_ms()
+            deadline = time.ticks_add(deadline, SAMPLE_PERIOD)
+            state = _state
             ticks = time.ticks_ms()
             x, y, z = _imu.acceleration
             if state == _idle_state:
@@ -174,6 +185,11 @@ def _thread_main():
                     pending = []
                     file.flush()
                     last_flush = time.ticks_ms()
+            remaining = time.ticks_diff(deadline, time.ticks_ms())
+            if remaining > 0:
+                time.sleep_ms(remaining)
+            else:
+                deadline = time.ticks_ms()  # resync after a long stall
         except Exception as e:
             # SD or IMU failure: stop logging only, the app keeps running
             global _last_error
@@ -186,8 +202,3 @@ def _thread_main():
                 except Exception:
                     pass
             return
-        remaining = time.ticks_diff(deadline, time.ticks_ms())
-        if remaining > 0:
-            time.sleep_ms(remaining)
-        else:
-            deadline = time.ticks_ms()  # resync after a long stall
