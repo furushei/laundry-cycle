@@ -1,6 +1,7 @@
 from array import array
 from machine import I2C
 import _thread
+import sys
 import time
 import uos
 
@@ -37,6 +38,7 @@ _ring_count = 0    # number of valid samples
 _imu = None
 _state = 0         # current app state, written by the main thread only
 _idle_state = 0    # state value that means "buffer only, do not record"
+_last_error = None  # exception that stopped the logger thread, if any
 
 
 def init(idle_state):
@@ -172,8 +174,12 @@ def _thread_main():
                     pending = []
                     file.flush()
                     last_flush = time.ticks_ms()
-        except Exception:
+        except Exception as e:
             # SD or IMU failure: stop logging only, the app keeps running
+            global _last_error
+            _last_error = e
+            if hasattr(sys, 'print_exception'):
+                sys.print_exception(e)
             if file:
                 try:
                     file.close()
