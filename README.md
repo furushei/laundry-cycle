@@ -35,7 +35,7 @@
 ```
 /flash
 ├─ boot.py
-├─ laundrycycle.py
+├─ main.py
 └─ accellogger.py
 ```
 
