@@ -1,6 +1,7 @@
 from array import array
 from machine import I2C
 import _thread
+import gc
 import sys
 import time
 import uos
@@ -20,7 +21,6 @@ I2C_SCL = 22
 LOG_DIR = '/sd/accel'
 CSV_HEADER = 'ticks_ms,state,x,y,z\n'
 FLUSH_PERIOD = 1000          # ms
-DUMP_CHUNK_ROWS = 200        # rows per write while dumping the ring buffer
 
 # Thread settings
 THREAD_STACK_SIZE = 8192     # bytes
@@ -132,22 +132,19 @@ def _push_ring(ticks, x, y, z):
 
 def _dump_ring_buffer(file):
     # runs inside the logger thread, which is the only reader and
-    # writer of the ring buffer, so no locking is needed
+    # writer of the ring buffer, so no locking is needed;
+    # rows are written one by one because the heap is too small for
+    # batching (the filesystem buffers writes per sector anyway)
     global _ring_index, _ring_count
+    gc.collect()
     if _ring_count < RING_BUFFER_SIZE:
         start = 0
     else:
         start = _ring_index
-    rows = []
     for offset in range(_ring_count):
         i = (start + offset) % RING_BUFFER_SIZE
-        rows.append(_format_row(
+        file.write(_format_row(
             _ring_ticks[i], _idle_state, _ring_x[i], _ring_y[i], _ring_z[i]))
-        if len(rows) >= DUMP_CHUNK_ROWS:
-            file.write(''.join(rows))
-            rows = []
-    if rows:
-        file.write(''.join(rows))
     _ring_index = 0
     _ring_count = 0
 
@@ -155,7 +152,6 @@ def _dump_ring_buffer(file):
 def _thread_main():
     global _alive_ticks
     file = None
-    pending = []
     last_flush = time.ticks_ms()
     deadline = time.ticks_ms()
     while True:
@@ -167,10 +163,9 @@ def _thread_main():
             x, y, z = _imu.acceleration
             if state == _idle_state:
                 if file:
-                    file.write(''.join(pending))
-                    pending = []
                     file.close()
                     file = None
+                    gc.collect()
                 _push_ring(ticks, x, y, z)
             else:
                 if file is None:
@@ -179,10 +174,8 @@ def _thread_main():
                     _dump_ring_buffer(file)
                     last_flush = time.ticks_ms()
                     deadline = time.ticks_ms()  # dumping takes a while
-                pending.append(_format_row(ticks, state, x, y, z))
+                file.write(_format_row(ticks, state, x, y, z))
                 if time.ticks_diff(time.ticks_ms(), last_flush) >= FLUSH_PERIOD:
-                    file.write(''.join(pending))
-                    pending = []
                     file.flush()
                     last_flush = time.ticks_ms()
             remaining = time.ticks_diff(deadline, time.ticks_ms())
