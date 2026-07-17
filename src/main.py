@@ -137,7 +137,7 @@ def stop_beep():
         timer = None
 
 
-def start():
+def main():
     lcd.clear()
 
     state = ST_IDLE
@@ -202,3 +202,7 @@ def start():
                 state = ST_IDLE
                 draw_idle_screen()
         time.sleep(0.1)
+
+
+if __name__ == "__main__":
+    main()

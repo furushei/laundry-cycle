@@ -22,45 +22,13 @@
     esptool --chip esp32 --port ポート名 write-flash 0x1000 ファイル名
     ```
 
-3. シリアルコンソールに接続する
-
-4. 以下のコードを入力する
-    ```python
-    def write_file(filename):
-        with open(filename, 'w') as file:
-            try:
-                while True:
-                    print(input(), file=file)
-            except EOFError:
-                print('done!')
+3. [mpremote](https://docs.micropython.org/en/latest/reference/mpremote.html)でファイルをアップロードする  
+    ```
+    python -m mpremote fs cp src/boot.py :
+    python -m mpremote fs cp src/main.py :
+    python -m mpremote fs cp src/accellogger.py :
     ```
 
-5. 以下のコードを入力する
-    ```python
-    write_file('boot.py')
-    ```
-
-6. `boot.py`の内容を貼り付ける
-
-7. Ctrl+Dを押す
-
-8. 以下のコードを入力する
-    ```python
-    write_file('laundrycycle.py')
-    ```
-
-9. `laundrycycle.py`の内容を貼り付ける
-
-10. Ctrl+Dを押す
-
-11. 以下のコードを入力する
-    ```python
-    write_file('accellogger.py')
-    ```
-
-12. `accellogger.py`の内容を貼り付ける
-
-13. Ctrl+Dを押す
 
 上記手順の完了後、フォルダ構成は以下の通りとなっている。
 
@@ -115,7 +83,7 @@ ticks_ms,state,x,y,z
 | --- | --- |
 | `ticks_ms` | サンプル時刻(`time.ticks_ms()`による相対時刻。ラップするため解析時は差分で扱う) |
 | `state` | 状態ID(1=IDLE(プレトリガ), 2=WASHING, 3=NOTIFYING, 4=UNLOADING) |
-| `x`, `y`, `z` | 加速度 [m/s²](小数4桁) |
+| `x`, `y`, `z` | 加速度 [m/s²] (小数4桁) |
 
 注意事項:
 

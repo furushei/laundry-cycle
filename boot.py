@@ -1,2 +1,0 @@
-import laundrycycle
-laundrycycle.start()
