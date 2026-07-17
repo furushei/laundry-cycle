@@ -103,9 +103,11 @@ def _start_thread():
 
 
 def _next_file_path():
+    # the FAT filesystem may store names in 8.3 uppercase form
+    # (e.g. '0001.CSV'), so match case-insensitively
     last = 0
     for name in uos.listdir(LOG_DIR):
-        if not name.endswith('.csv'):
+        if not name.lower().endswith('.csv'):
             continue
         try:
             number = int(name[:-4])
@@ -113,7 +115,13 @@ def _next_file_path():
             continue
         if number > last:
             last = number
-    return '{}/{:04d}.csv'.format(LOG_DIR, last + 1)
+    while True:
+        last += 1
+        path = '{}/{:04d}.csv'.format(LOG_DIR, last)
+        try:
+            uos.stat(path)
+        except OSError:
+            return path  # first number that does not exist yet
 
 
 def _format_row(ticks, state, x, y, z):
