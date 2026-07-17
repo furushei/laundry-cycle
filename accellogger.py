@@ -20,7 +20,7 @@ I2C_SCL = 22
 # SD card settings
 LOG_DIR = '/sd/accel'
 CSV_HEADER = 'ticks_ms,state,x,y,z\n'
-FLUSH_PERIOD = 1000          # ms
+FLUSH_PERIOD = 5000          # ms
 
 # Thread settings
 THREAD_STACK_SIZE = 8192     # bytes
